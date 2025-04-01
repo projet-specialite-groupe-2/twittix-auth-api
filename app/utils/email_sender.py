@@ -30,7 +30,6 @@ def send_email(to, subject, html_template_path, **kwargs):
             server.starttls()
             server.login(sender_email, sender_password)
             server.sendmail(sender_email, to, msg.as_string())
-        print("Email envoyé avec succès !")
     except smtplib.SMTPException as e:
         print(f"Erreur SMTP : {e}")
     except Exception as e:
