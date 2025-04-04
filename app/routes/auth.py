@@ -1,4 +1,9 @@
+import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
+from app.models.return_serializer import (
+    temporary_token_response,
+    token_is_valid_response,
+)
 from app.services.auth_service import (
     authenticate_user,
     send_2fa_code,
@@ -10,6 +15,7 @@ from app.services.token_manager import (
     confirm_token_url,
     generate_auth_token,
     generate_temporary_token,
+    verify_auth_token,
     verify_temporary_auth_token,
 )
 from app.services.user_manager import create_user, patch_user
@@ -17,7 +23,7 @@ from app.services.user_manager import create_user, patch_user
 auth_router = APIRouter()
 
 
-@auth_router.post("/login")
+@auth_router.post("/login", response_model=temporary_token_response)
 async def login(credentials: UserCredentials):
     user = authenticate_user(credentials)
     if not user["result"]:
@@ -31,7 +37,7 @@ async def login(credentials: UserCredentials):
     return {"temporary_token": temporary_token}
 
 
-@auth_router.post("/verify-2fa")
+@auth_router.post("/verify-2fa", response_model=Token)
 async def verify_2fa(
     data: TwoFactorCode, token: str = Depends(verify_temporary_auth_token)
 ):
@@ -74,14 +80,17 @@ async def confirm_email(token: str, email: str):
         }
 
 
-@auth_router.post("/token-is-valid")
+@auth_router.post("/token-is-valid", response_model=token_is_valid_response)
 async def token_is_valid(token: Token):
     """
     Vérifie si le token est valide
     """
-    if not verify_temporary_auth_token(token.token):
+
+    result = verify_auth_token(token.token)
+
+    if not verify_auth_token(token.token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalide"
         )
 
-    return {"message": "Token valide"}
+    return {"email": result["email"], "token": token.token, "exp_time": result["exp"]}

@@ -39,10 +39,14 @@ def verify_auth_token(token):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("email")
         if email:
-            return redis_client.get(f"auth_token:{email}") == token
+            return {
+                "valid": redis_client.get(f"auth_token:{email}") == token,
+                "email": email,
+                "exp": datetime.datetime.fromtimestamp(payload.get("exp")),
+            }
     except jwt.PyJWTError:
-        return False
-    return False
+        return {"valid": False}
+    return {"valid": False}
 
 
 def verify_temporary_auth_token(token: str = Depends(temporary_oauth2_scheme)):
