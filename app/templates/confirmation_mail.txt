@@ -1,8 +1,0 @@
-Bienvenue sur Twittix, {{ user }} !!
-
-Vous pouvez confirmer votre mot de passe avec le code suivant :
-
-{{ token }}
-
-Merci de votre confiance.  
-L'équipe Twittix.
