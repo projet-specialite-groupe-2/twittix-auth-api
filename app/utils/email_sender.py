@@ -1,3 +1,4 @@
+from email.mime.multipart import MIMEMultipart
 import smtplib
 from email.mime.text import MIMEText
 from app.core.config import settings
@@ -20,10 +21,12 @@ def send_email(to, subject, html_template_path, **kwargs):
         print(f"Erreur lors du rendu du template : {e}")
         return
 
-    msg = MIMEText(html_content, _subtype="plain")
+    msg = MIMEMultipart()
     msg["Subject"] = subject
     msg["From"] = sender_email
     msg["To"] = to
+
+    msg.attach(MIMEText(html_content, "html"))
 
     try:
         with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
