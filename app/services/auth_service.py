@@ -44,7 +44,6 @@ def send_confirmation_mail(email, username):
     confirmation_url = (
         f"{settings.BASE_URL}/auth/confirm-email?token={token}&email={email}"
     )
-    print(confirmation_url)
     send_email(
         to=email,
         subject="Confirmation d'email",

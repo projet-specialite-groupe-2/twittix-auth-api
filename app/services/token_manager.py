@@ -50,7 +50,6 @@ def verify_temporary_auth_token(token: str = Depends(temporary_oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload["email"]
-        print(email)
         # Vérifier si le token est toujours valide dans Redis
 
         stored_token = redis_client.get(f"auth_token:{email}")

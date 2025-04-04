@@ -5,7 +5,6 @@ from app.models.user import User
 
 def create_user(user):
     """Crée un nouvel utilisateur via une API externe."""
-    print(user.dict())
     response = requests.post(settings.BACKEND_URL + "/api/users", json=user.dict())
     if response.status_code == 201:
         return response.json()

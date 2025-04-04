@@ -8,8 +8,3 @@ app = FastAPI(
 
 # Inclusion des routes d'authentification
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
-
-
-@app.get("/")
-async def root():
-    return {"message": "Bienvenue sur l'API"}
