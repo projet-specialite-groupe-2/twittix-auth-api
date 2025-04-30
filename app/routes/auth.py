@@ -5,58 +5,106 @@ from app.services.auth_service import (
     send_confirmation_mail,
     verify_2fa_code,
 )
-from app.models.user import Token, UserCredentials, TwoFactorCode
+from app.models.user import (
+    Token,
+    TokenAndRefresh,
+    UserCredentials,
+    TwoFactorCode,
+    temporary_token_response,
+    token_is_valid_response,
+)
 from app.services.token_manager import (
     confirm_token_url,
     generate_auth_token,
+    generate_refresh_token,
     generate_temporary_token,
     verify_temporary_auth_token,
+    verify_auth_token,
 )
 from app.services.user_manager import create_user, patch_user
+from app.database import database
+from app.schema.schema import *
+from sqlalchemy.orm import Session
+from app.models.models import User
+from passlib.hash import bcrypt
 
 auth_router = APIRouter()
 
 
-@auth_router.post("/login")
-async def login(credentials: UserCredentials):
-    user = authenticate_user(credentials)
-    if not user["result"]:
+def get_db():
+    db = database.SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@auth_router.post("/login", response_model=temporary_token_response)
+async def login(credentials: UserCredentials, db: Session = Depends(get_db)):
+    user = db.query(User).filter_by(email=credentials.email).first()
+    if not user or not bcrypt.verify(credentials.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides"
+        )
+
+    user_authenticate = authenticate_user(
+        {"email": credentials.email, "password": "test1234"}
+    )
+    if not user_authenticate["result"]:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User is blocked"
         )
     # Envoi du code 2FA
     send_2fa_code(credentials.email)
 
-    temporary_token = generate_temporary_token(credentials.email)
+    temporary_token = generate_temporary_token(user.id, user.hashed_password)
     return {"temporary_token": temporary_token}
 
 
-@auth_router.post("/verify-2fa")
+@auth_router.post("/verify-2fa", response_model=TokenAndRefresh)
 async def verify_2fa(
-    data: TwoFactorCode, token: str = Depends(verify_temporary_auth_token)
+    data: TwoFactorCode,
+    payload: str = Depends(verify_temporary_auth_token),
+    db: Session = Depends(get_db),
 ):
+    user = db.query(User).filter_by(id=payload["sub"].replace("temp", "")).first()
+    if not user or user.email != data.email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Utilisateur non trouvé"
+        )
 
     if verify_2fa_code(data.email, data.code):
-        token = generate_auth_token(data.email)
-        return {"token": token}
+        token = generate_auth_token(user.id, user.hashed_password)
+        refresh_token = generate_refresh_token(user.id, user.hashed_password)
+        return {"token": token, "refresh_token": refresh_token}
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Code 2FA invalide"
         )
 
 
-@auth_router.post("/register")
-async def register_user(credentials: UserCredentials):
+@auth_router.post("/register", response_model=UserResponse)
+async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     # Enregistrement de l'utilisateur dans la base de données
-    response = create_user(credentials)
-
-    if "error" in response:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=response["error"]
-        )
-
-    send_confirmation_mail(credentials.email, credentials.username)
-    return {"message": "Utilisateur créé avec succès"}
+    db.query(User).filter_by(email=user.email).delete()
+    existing_user = db.query(User).filter_by(email=user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email déjà utilisé")
+    hashed_pw = bcrypt.hash(user.password)
+    db_user = User(email=user.email, hashed_password=hashed_pw)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    create_user(
+        {
+            "email": user.email,
+            "username": user.username,
+            "birthdate": user.birthdate,
+            "password": user.password,
+        }
+    )
+    send_confirmation_mail(user.email)
+    return db_user
 
 
 @auth_router.get("/confirm-email")
@@ -74,14 +122,45 @@ async def confirm_email(token: str, email: str):
         }
 
 
-@auth_router.post("/token-is-valid")
-async def token_is_valid(token: Token):
+@auth_router.post("/token-is-valid", response_model=token_is_valid_response)
+async def token_is_valid(token: Token, db: Session = Depends(get_db)):
     """
     Vérifie si le token est valide
     """
-    if not verify_temporary_auth_token(token.token):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalide"
-        )
 
-    return {"message": "Token valide"}
+    payload = verify_auth_token(token.token)
+
+    if payload.get("type") == "refresh":
+        raise HTTPException(status_code=400, detail="Invalid token type")
+
+    user_id = int(payload["sub"])
+    hashed_password = payload["pwd"]
+
+    user = db.query(User).filter_by(id=user_id).first()
+    if not user or user.hashed_password != hashed_password:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    return {"email": user.email, "token": token.token, "exp_time": payload["exp"]}
+
+
+@auth_router.post("/token/refresh", response_model=Token)
+def refresh_token(refresh_token: Token, db: Session = Depends(get_db)):
+    try:
+        payload = verify_auth_token(refresh_token)
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+    if payload.get("type") != "refresh":
+        raise HTTPException(status_code=400, detail="Invalid token type")
+
+    user_id = int(payload["sub"])
+    hashed_password = payload["pwd"]
+
+    user = db.query(User).filter_by(id=user_id).first()
+    if not user or user.hashed_password != hashed_password:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    new_access_token = generate_auth_token(user.id, user.hashed_password)
+    return {
+        "token": new_access_token,
+    }
