@@ -18,7 +18,7 @@ class token_is_valid_response(BaseModel):
 
 
 class temporary_token_response(BaseModel):
-    refresh_token: str
+    temporary_token: str
 
 
 class Token(BaseModel):
