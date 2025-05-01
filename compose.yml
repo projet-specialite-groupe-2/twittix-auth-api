@@ -17,8 +17,25 @@ services:
       sh -c "pip install --no-cache-dir -r requirements/requirement.txt && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app"
     depends_on:
       - redis
+      - db
     networks:
       - net-twittix
+
+
+  db:
+    image: postgres:15
+    container_name: pg_twittix
+    environment:
+      POSTGRES_DB: twittix
+      POSTGRES_USER: twittix_user
+      POSTGRES_PASSWORD: supersecret
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - net-twittix
+
 
   redis:
     image: redis:latest
@@ -33,3 +50,6 @@ services:
 networks:
     net-twittix:
       external: true
+
+volumes:
+  pg_data:

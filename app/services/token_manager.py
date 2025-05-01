@@ -1,5 +1,6 @@
 import jwt
-import datetime
+from datetime import datetime, timedelta
+
 import secrets
 from app.core.config import settings
 from app.core.redis_client import redis_client
@@ -10,25 +11,32 @@ temporary_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 SECRET_KEY = settings.JWT_SECRET
 ALGORITHM = "HS256"  # Algorithme de signature sécurisé
-TOKEN_EXPIRATION_SECONDS = 3600  # 1 heure d'expiration
+TOKEN_EXPIRATION_HOURS = 1  # 1 heure d'expiration
 TEMPORARY_TOKEN_EXPIRATION_SECONDS = 600  # 1 minute d'expiration
 URL_TOKEN_EXPIRATION = 99999999999999999
+REFRESH_TOKEN_EXPIRE_DAYS = 10
 
 
-def generate_auth_token(email):
-    """Génère un token JWT et le stocke dans Redis avec expiration."""
-    expiration_time = datetime.datetime.now() + datetime.timedelta(
-        seconds=TOKEN_EXPIRATION_SECONDS
-    )
-
+def generate_auth_token(user_id: int, hashed_password: str):
     payload = {
-        "email": email,
-        "exp": expiration_time,  # Date d'expiration
-        "iat": datetime.datetime.now(),  # Date d'émission
+        "sub": str(user_id),
+        "pwd": hashed_password,
+        "exp": datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRATION_HOURS),
+        "type": "access",
     }
-    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-    redis_client.setex(f"auth_token:{email}", TOKEN_EXPIRATION_SECONDS, token)
+
+def generate_refresh_token(user_id: int, hashed_password: str):
+    """Génère un token JWT et le stocke dans Redis avec expiration."""
+    payload = {
+        "sub": str(user_id),
+        "pwd": hashed_password,
+        "exp": datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        "type": "refresh",
+    }
+
+    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
     return token
 
@@ -36,27 +44,19 @@ def generate_auth_token(email):
 def verify_auth_token(token):
     """Vérifie si le token JWT est valide."""
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email = payload.get("email")
-        if email:
-            return redis_client.get(f"auth_token:{email}") == token
-    except jwt.PyJWTError:
-        return False
-    return False
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise ValueError("Token expired")
+    except jwt.InvalidTokenError:
+        raise ValueError("Invalid token")
 
 
 def verify_temporary_auth_token(token: str = Depends(temporary_oauth2_scheme)):
     """Vérifie le token Bearer et retourne l'ID utilisateur."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email = payload["email"]
-        # Vérifier si le token est toujours valide dans Redis
 
-        stored_token = redis_client.get(f"auth_token:{email}")
-        if stored_token and stored_token == token:
-            return email
-        else:
-            raise HTTPException(status_code=401, detail="Token expiré ou invalide.")
+        return payload
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expiré.")
@@ -64,24 +64,17 @@ def verify_temporary_auth_token(token: str = Depends(temporary_oauth2_scheme)):
         raise HTTPException(status_code=401, detail="Token invalide.")
 
 
-def generate_temporary_token(email):
-    """Génère un token JWT temporaire sans stockage."""
-    expiration_time = datetime.datetime.now() + datetime.timedelta(
-        seconds=TEMPORARY_TOKEN_EXPIRATION_SECONDS
-    )
-
+def generate_temporary_token(user_id: int, hashed_password: str):
+    """Génère un token JWT et le stocke dans Redis avec expiration."""
     payload = {
-        "email": email + "temporary",
-        "exp": expiration_time,  # Date d'expiration
-        "iat": datetime.datetime.now(),  # Date d'émission
+        "sub": str(user_id) + "temp",
+        "pwd": hashed_password,
+        "exp": datetime.utcnow()
+        + timedelta(seconds=TEMPORARY_TOKEN_EXPIRATION_SECONDS),
+        "type": "refresh",
     }
-    temporary_token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-    redis_client.setex(
-        f"auth_token:{email}temporary",
-        TEMPORARY_TOKEN_EXPIRATION_SECONDS,
-        temporary_token,
-    )
+    temporary_token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
     return temporary_token
 

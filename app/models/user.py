@@ -3,7 +3,6 @@ from pydantic import BaseModel, EmailStr
 
 class UserCredentials(BaseModel):
     email: EmailStr
-    username: str
     password: str
 
 
@@ -12,17 +11,31 @@ class TwoFactorCode(BaseModel):
     code: int
 
 
+class token_is_valid_response(BaseModel):
+    email: EmailStr
+    token: str
+    exp_time: int
+
+
+class temporary_token_response(BaseModel):
+    temporary_token: str
+
+
 class Token(BaseModel):
     token: str
 
 
-class User(BaseModel):
+class TokenAndRefresh(BaseModel):
+    token: str
+    refresh_token: str
+
+
+class BackendUser(BaseModel):
 
     id: int
     createdAt: str
     updatedAt: str
     email: EmailStr
-    password: str
     roles: list[str]
     username: str
     profileImgPath: str

@@ -13,7 +13,7 @@ two_factor_storage = {}
 def authenticate_user(credentials):
     """Vérifie les identifiants via une API externe."""
     response = requests.post(
-        settings.BACKEND_URL + "/api/users/active", json=credentials.dict()
+        settings.BACKEND_URL + "/api/users/active", json=credentials
     )
     if response.status_code == 200:
         return response.json()
@@ -38,7 +38,7 @@ def verify_2fa_code(email, code):
     return two_factor_storage.get(email) == code
 
 
-def send_confirmation_mail(email, username):
+def send_confirmation_mail(email):
     token = generate_token_url(email)
 
     confirmation_url = (
@@ -49,7 +49,6 @@ def send_confirmation_mail(email, username):
         subject="Confirmation d'email",
         html_template_path="confirmation_mail.html",
         confirmation_url=confirmation_url,
-        username=username,
     )
 
     # Envoyer l'email
