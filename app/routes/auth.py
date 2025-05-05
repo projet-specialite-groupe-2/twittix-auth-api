@@ -93,25 +93,42 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     hashed_pw = bcrypt.hash(user.password)
     db_user = User(email=user.email, hashed_password=hashed_pw)
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    create_user(
+
+    token = generate_auth_token(db_user.id, db_user.hashed_password)
+
+    response, code = create_user(
         {
             "email": user.email,
             "username": user.username,
             "birthdate": user.birthdate,
             "password": user.password,
-        }
+        },
+        token,
     )
+    if code != 201:
+        db.query(User).filter_by(email=user.email).delete()
+        db.commit()
+        raise HTTPException(
+            status_code=code,
+            detail=response,
+        )
+    db.commit()
+    db.refresh(db_user)
     send_confirmation_mail(user.email)
     return db_user
 
 
 @auth_router.get("/confirm-email")
-async def confirm_email(token: str, email: str):
+async def confirm_email(token: str, email: str, db: Session = Depends(get_db)):
     confirm_token_url(email, token)
     patch_user_data = {"active": True}
-    result = patch_user(patch_user_data, email)
+    user = db.query(User).filter_by(email=email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Utilisateur non trouvé"
+        )
+    token = generate_auth_token(user.id, user.hashed_password)
+    result = patch_user(patch_user_data, email, token=token)
     if "error" in result:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=result["error"]
