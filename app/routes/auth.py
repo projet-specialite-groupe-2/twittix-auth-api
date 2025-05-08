@@ -94,9 +94,9 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = User(email=user.email, hashed_password=hashed_pw)
     db.add(db_user)
 
-    token = generate_auth_token(db_user.id, db_user.hashed_password)
     db.commit()
     db.refresh(db_user)
+    token = generate_auth_token(db_user.id, db_user.hashed_password)
     response, code = create_user(
         {
             "email": user.email,
