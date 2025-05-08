@@ -95,7 +95,8 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
 
     token = generate_auth_token(db_user.id, db_user.hashed_password)
-
+    db.commit()
+    db.refresh(db_user)
     response, code = create_user(
         {
             "email": user.email,
@@ -112,8 +113,7 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
             status_code=code,
             detail=response,
         )
-    db.commit()
-    db.refresh(db_user)
+
     send_confirmation_mail(user.email)
     return db_user
 
