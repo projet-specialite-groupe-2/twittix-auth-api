@@ -85,7 +85,9 @@ async def verify_2fa(
         )
 
 
-@auth_router.post("/register", response_model=UserResponse)
+@auth_router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
 async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     # Enregistrement de l'utilisateur dans la base de données
     db.query(User).filter_by(email=user.email).delete()
