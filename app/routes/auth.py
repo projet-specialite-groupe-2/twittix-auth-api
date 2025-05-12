@@ -47,9 +47,7 @@ async def login(credentials: UserCredentials, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides"
         )
 
-    user_authenticate = authenticate_user(
-        {"email": credentials.email, "password": "test1234"}
-    )
+    user_authenticate = authenticate_user({"email": credentials.email})
     if not user_authenticate["result"]:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User is blocked"
@@ -94,14 +92,14 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = User(email=user.email, hashed_password=hashed_pw)
     db.add(db_user)
 
+    db.commit()
+    db.refresh(db_user)
     token = generate_auth_token(db_user.id, db_user.hashed_password)
-
     response, code = create_user(
         {
             "email": user.email,
             "username": user.username,
             "birthdate": user.birthdate,
-            "password": user.password,
         },
         token,
     )
@@ -112,8 +110,7 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
             status_code=code,
             detail=response,
         )
-    db.commit()
-    db.refresh(db_user)
+
     send_confirmation_mail(user.email)
     return db_user
 

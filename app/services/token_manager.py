@@ -21,7 +21,7 @@ def generate_auth_token(user_id: int, hashed_password: str):
     payload = {
         "sub": str(user_id),
         "pwd": hashed_password,
-        "exp": datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRATION_HOURS),
+        "exp": datetime.utcnow() + timedelta(hours=TOKEN_EXPIRATION_HOURS),
         "type": "access",
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
