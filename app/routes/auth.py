@@ -124,7 +124,7 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
 @auth_router.get("/confirm-email")
 async def confirm_email(token: str, email: str, db: Session = Depends(get_db)):
     confirm_token_url(email, token)
-    patch_user_data = {"active": True}
+    patch_user_data = {"active": True, "email": email}
     user = db.query(User).filter_by(email=email).first()
     if not user:
         raise HTTPException(
