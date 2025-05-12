@@ -8,7 +8,7 @@ def create_user(user, token):
     headers = {"Authorization": f"Bearer {token}"}
     try:
         response = requests.post(
-            settings.BACKEND_URL + "/api/users", json=user, headers=headers
+            settings.BACKEND_URL + "/api/users/register", json=user, headers=headers
         )
     except requests.exceptions.RequestException as e:
         return {
