@@ -55,7 +55,9 @@ async def login(credentials: UserCredentials, db: Session = Depends(get_db)):
     # Envoi du code 2FA
     send_2fa_code(credentials.email)
 
-    temporary_token = generate_temporary_token(user.id, user.hashed_password)
+    temporary_token = generate_temporary_token(
+        user.id, user.email, user.hashed_password
+    )
     return {"temporary_token": temporary_token}
 
 
@@ -72,8 +74,10 @@ async def verify_2fa(
         )
 
     if verify_2fa_code(data.email, data.code):
-        token = generate_auth_token(user.id, user.hashed_password)
-        refresh_token = generate_refresh_token(user.id, user.hashed_password)
+        token = generate_auth_token(user.id, user.email, user.hashed_password)
+        refresh_token = generate_refresh_token(
+            user.id, user.email, user.hashed_password
+        )
         return {"token": token, "refresh_token": refresh_token}
     else:
         raise HTTPException(
@@ -94,7 +98,7 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(db_user)
-    token = generate_auth_token(db_user.id, db_user.hashed_password)
+    token = generate_auth_token(db_user.id, db_user.email, db_user.hashed_password)
     response, code = create_user(
         {
             "email": user.email,
@@ -124,7 +128,7 @@ async def confirm_email(token: str, email: str, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Utilisateur non trouvé"
         )
-    token = generate_auth_token(user.id, user.hashed_password)
+    token = generate_auth_token(user.id, user.email, user.hashed_password)
     result = patch_user(patch_user_data, email, token=token)
     if "error" in result:
         raise HTTPException(
@@ -174,7 +178,7 @@ def refresh_token(refresh_token: Token, db: Session = Depends(get_db)):
     if not user or user.hashed_password != hashed_password:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
-    new_access_token = generate_auth_token(user.id, user.hashed_password)
+    new_access_token = generate_auth_token(user.id, user.email, user.hashed_password)
     return {
         "token": new_access_token,
     }
