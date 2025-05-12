@@ -17,11 +17,17 @@ def create_user(user, token):
     if response.status_code == 201:
         return response.json(), response.status_code
     else:
-        error = response.json().get("detail", "Erreur inconnue")
-        return (
-            {"error": f"Erreur lors de la création de l'utilisateur: {error}"},
-            response.status_code,
-        )
+        try:
+            error = response.json().get("detail", "Erreur inconnue")
+            return (
+                {"error": f"Erreur lors de la création de l'utilisateur: {error}"},
+                response.status_code,
+            )
+        except:
+            return (
+                {"error": f"Erreur lors de la création de l'utilisateur: {response}"},
+                response.status_code,
+            )
 
 
 def patch_user(user_data, email, token):
