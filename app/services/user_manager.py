@@ -5,7 +5,7 @@ import requests
 
 def create_user(user, token):
     """Crée un nouvel utilisateur via une API externe."""
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token}", "X-Api-Key": settings.API_KEY}
     try:
         response = requests.post(
             settings.BACKEND_URL + "/api/users/register", json=user, headers=headers
@@ -32,7 +32,7 @@ def create_user(user, token):
 
 def patch_user(user_data, email, token):
     """Met à jour les informations d'un utilisateur via une API externe."""
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token}", "X-Api-Key": settings.API_KEY}
     user = requests.get(
         settings.BACKEND_URL + "/api/users?email=" + email, headers=headers
     )

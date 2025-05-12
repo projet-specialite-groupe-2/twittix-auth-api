@@ -12,6 +12,8 @@ two_factor_storage = {}
 
 def authenticate_user(credentials):
     """Vérifie les identifiants via une API externe."""
+    headers = {"X-Api-Key": settings.API_KEY}
+
     response = requests.post(
         settings.BACKEND_URL + "/api/users/active", json=credentials
     )
