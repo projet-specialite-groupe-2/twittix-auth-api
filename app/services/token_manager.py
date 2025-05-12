@@ -17,9 +17,10 @@ URL_TOKEN_EXPIRATION = 99999999999999999
 REFRESH_TOKEN_EXPIRE_DAYS = 10
 
 
-def generate_auth_token(user_id: int, hashed_password: str):
+def generate_auth_token(user_id: int, email: str, hashed_password: str):
     payload = {
         "sub": str(user_id),
+        "email": email,
         "pwd": hashed_password,
         "exp": datetime.utcnow() + timedelta(hours=TOKEN_EXPIRATION_HOURS),
         "type": "access",
@@ -27,10 +28,11 @@ def generate_auth_token(user_id: int, hashed_password: str):
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def generate_refresh_token(user_id: int, hashed_password: str):
+def generate_refresh_token(user_id: int, email: str, hashed_password: str):
     """Génère un token JWT et le stocke dans Redis avec expiration."""
     payload = {
         "sub": str(user_id),
+        "email": email,
         "pwd": hashed_password,
         "exp": datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
         "type": "refresh",
@@ -64,10 +66,11 @@ def verify_temporary_auth_token(token: str = Depends(temporary_oauth2_scheme)):
         raise HTTPException(status_code=401, detail="Token invalide.")
 
 
-def generate_temporary_token(user_id: int, hashed_password: str):
+def generate_temporary_token(user_id: int, email: str, hashed_password: str):
     """Génère un token JWT et le stocke dans Redis avec expiration."""
     payload = {
         "sub": str(user_id) + "temp",
+        "email": email,
         "pwd": hashed_password,
         "exp": datetime.utcnow()
         + timedelta(seconds=TEMPORARY_TOKEN_EXPIRATION_SECONDS),
