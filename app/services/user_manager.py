@@ -45,6 +45,7 @@ def patch_user(user_data, email, token):
         headers={
             "Content-Type": "application/merge-patch+json",
             "Authorization": f"Bearer {token}",
+            "X-Api-Key": settings.API_KEY,
         },
     )
     if response.status_code == 200:
