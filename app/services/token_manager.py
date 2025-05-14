@@ -94,10 +94,15 @@ def confirm_token_url(email, token):
     stored_token = redis_client.get(f"email_confirm:{email}")
 
     if not stored_token:
-        raise HTTPException(status_code=400, detail="Lien invalide ou expiré")
+        raise HTTPException(
+            status_code=400,
+            detail={"data": "error", "error": "Lien invalide ou expiré"},
+        )
 
     if stored_token != token:
-        raise HTTPException(status_code=400, detail="Token incorrect")
+        raise HTTPException(
+            status_code=400, detail={"data": "error", "error": "Token incorrect"}
+        )
 
     # TODO: Mettre à jour l'utilisateur en base (email confirmé)
 

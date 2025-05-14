@@ -14,7 +14,7 @@ class Settings:
     REDIS_HOST: str = os.getenv("REDIS_HOST", "redis")
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
     JWT_SECRET: str = os.getenv("JWT_SECRET")
-    BASE_URL: str = os.getenv("BASE_URL")
+    CONFIRMATION_URL: str = os.getenv("CONFIRMATION_URL")
     API_KEY: str = os.getenv("API_KEY")
 
 
