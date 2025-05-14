@@ -128,17 +128,22 @@ async def confirm_email(token: str, email: str, db: Session = Depends(get_db)):
     user = db.query(User).filter_by(email=email).first()
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Utilisateur non trouvé"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utilisateur non trouvé",
+            error={"data": "error"},
         )
     token = generate_auth_token(user.id, user.email, user.hashed_password)
     result = patch_user(patch_user_data, email, token=token)
     if "error" in result:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=result["error"]
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result["error"],
+            error={"data": "error"},
         )
     else:
         return {
-            "message": "Email confirmé avec succès ! Vous pouvez maintenant vous connecter."
+            "message": "Email confirmé avec succès ! Vous pouvez maintenant vous connecter.",
+            "data": "success",
         }
 
 

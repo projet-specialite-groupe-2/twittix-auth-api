@@ -45,9 +45,7 @@ def verify_2fa_code(email, code):
 def send_confirmation_mail(email):
     token = generate_token_url(email)
 
-    confirmation_url = (
-        f"{settings.BASE_URL}/auth/confirm-email?token={token}&email={email}"
-    )
+    confirmation_url = f"{settings.CONFIRMATION_URL}?token={token}&email={email}"
     send_email(
         to=email,
         subject="Confirmation d'email",
