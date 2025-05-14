@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - dev
-      - feature/ci-cd
 
 jobs:
   test:
@@ -51,3 +50,4 @@ jobs:
           SCRIPT_AFTER: |
             cd ./dev/auth/ 
             docker network inspect net-twittix >/dev/null 2>&1 || docker network create net-twittix
+            docker compose up -d --build
