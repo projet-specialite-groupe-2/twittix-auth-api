@@ -1,0 +1,27 @@
+{% autoescape true %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Code de validation - Twittix</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.5; color: #333;">
+    <h2>Bonjour {{ user }},</h2>
+
+    <p>Vous essayez de vous connecter à votre compte Twittix.</p>
+    <p>Voici votre code de vérification :</p>
+
+    <p style="text-align: center; font-size: 24px; font-weight: bold; background: #f4f4f4; padding: 10px; border-radius: 5px; display: inline-block;">
+        {{ code }}
+    </p>
+
+    <p>Ce code est valable pendant 10 minutes.</p>
+    
+    <p>Si vous n'êtes pas à l'origine de cette demande, nous vous recommandons de modifier votre mot de passe immédiatement.</p>
+
+    <br>
+    <p>Cordialement,</p>
+    <p><strong>L'équipe Twittix</strong></p>
+</body>
+</html>
+{% endautoescape %}
