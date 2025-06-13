@@ -1,0 +1,55 @@
+
+services:
+  app:
+    image: python:3.10-slim  # Utilisation d'une image Python officielle
+    container_name: fastapi_app
+    working_dir: /app
+    volumes:
+      - .:/app  # Monte ton projet dans le conteneur
+    ports:
+      - "587:587"
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis  # Correction du nom du service Redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=supersecretkey
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements/requirement.txt && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app"
+    depends_on:
+      - redis
+      - db
+    networks:
+      - net-twittix
+
+
+  db:
+    image: postgres:15
+    container_name: pg_twittix
+    environment:
+      POSTGRES_DB: twittix
+      POSTGRES_USER: twittix_user
+      POSTGRES_PASSWORD: supersecret
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - net-twittix
+
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    networks:
+      - net-twittix
+
+networks:
+    net-twittix:
+      external: true
+
+volumes:
+  pg_data:
