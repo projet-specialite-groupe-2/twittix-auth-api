@@ -50,5 +50,5 @@ jobs:
           TARGET: ./dev/auth/
           SCRIPT_AFTER: |
             cd ./dev/auth/ 
-            docker network inspect net-twittix >/dev/null 2>&1 || docker network create net-twittix
-            docker compose up -d --build
+            sudo docker network inspect net-twittix >/dev/null 2>&1 || docker network create net-twittix
+            sudo docker compose up -d
