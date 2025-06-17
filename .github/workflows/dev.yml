@@ -24,7 +24,7 @@ jobs:
           
       - name: Ensure Docker network exists
         run: |
-          docker network inspect net-twittix >/dev/null 2>&1 || docker network create net-twittix     
+          docker network inspect net-twittix >/dev/null 2>&1 || docker network create --label com.docker.compose.network=net-twittix net-twittix     
 
       - name: Build Docker Compose services
         run: docker-compose build  
